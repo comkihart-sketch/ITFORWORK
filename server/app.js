@@ -58,16 +58,18 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
     }
 
+    const mustChangePassword = Boolean(user.must_change_password === 1 || user.must_change_password === true);
     const payload = {
       id: user.id,
       username: user.username,
       full_name: user.full_name,
       role: user.role,
-      position: user.position
+      position: user.position,
+      must_change_password: mustChangePassword
     };
 
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: payload });
+    res.json({ token, user: payload, must_change_password: mustChangePassword });
   } catch (err) {
     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + err.message });
   }
@@ -77,9 +79,48 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
     const user = await dbAdapter.getUserById(req.user.id);
     if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
-    res.json(user);
+    const mustChangePassword = Boolean(user.must_change_password === 1 || user.must_change_password === true);
+    res.json({
+      ...user,
+      must_change_password: mustChangePassword
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { new_password, confirm_password } = req.body;
+    if (!new_password || new_password.trim().length < 4) {
+      return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร' });
+    }
+    if (confirm_password && new_password !== confirm_password) {
+      return res.status(400).json({ error: 'รหัสผ่านยืนยันไม่ตรงกับรหัสผ่านใหม่' });
+    }
+
+    await dbAdapter.changePassword(req.user.id, new_password.trim());
+
+    // Refresh user info and issue clean token
+    const user = await dbAdapter.getUserById(req.user.id);
+    const payload = {
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      role: user.role,
+      position: user.position,
+      must_change_password: false
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    res.json({
+      success: true,
+      message: 'ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว',
+      token,
+      user: payload
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน: ' + err.message });
   }
 });
 

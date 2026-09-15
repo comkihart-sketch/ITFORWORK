@@ -12,8 +12,11 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL DEFAULT 'STAFF',
   position TEXT,
   phone TEXT,
+  must_change_password INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password INTEGER DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS shift_types (
   id SERIAL PRIMARY KEY,
@@ -83,10 +86,10 @@ ALTER TABLE daily_notes DISABLE ROW LEVEL SECURITY;
 -- ==============================================================================
 
 -- เพิ่มรายชื่อพนักงานจริง 3 ท่าน (คงรหัสผ่านเดิมไว้ 100%)
-INSERT INTO users (id, username, password_hash, full_name, role, position, phone) VALUES
-(5, '0157', '$2b$10$TTrPIyzraBPEvZ8vOcg.I.Xx7Ow0GQ0DUp3zmFZ1HN5AaBkZcA4oi', 'วุฒิชัย เจิมเกาะ', 'ADMIN', 'HOU INFRASTRUCTURE', '0800572414'),
-(6, '0533', '$2b$10$VwmuZqBr7TnrM0jywH5KMOmCSRQxAsSczfeI1yi2wvI1G7iPoqQzm', 'อนุชิต จันทอง', 'STAFF', 'IT SUPPORT', '-'),
-(7, '0665', '$2b$10$L/BysqG9r9TT.3SyCAZ5tegK9Uoh8YNaIf8if6JdEkHdW30tI9KM.', 'นายศิวัช ทัพขวา', 'STAFF', 'IT SUPPORT', '-')
+INSERT INTO users (id, username, password_hash, full_name, role, position, phone, must_change_password) VALUES
+(5, '0157', '$2b$10$TTrPIyzraBPEvZ8vOcg.I.Xx7Ow0GQ0DUp3zmFZ1HN5AaBkZcA4oi', 'วุฒิชัย เจิมเกาะ', 'ADMIN', 'HOU INFRASTRUCTURE', '0800572414', 0),
+(6, '0533', '$2b$10$VwmuZqBr7TnrM0jywH5KMOmCSRQxAsSczfeI1yi2wvI1G7iPoqQzm', 'อนุชิต จันทอง', 'STAFF', 'IT SUPPORT', '-', 1),
+(7, '0665', '$2b$10$L/BysqG9r9TT.3SyCAZ5tegK9Uoh8YNaIf8if6JdEkHdW30tI9KM.', 'นายศิวัช ทัพขวา', 'STAFF', 'IT SUPPORT', '-', 1)
 ON CONFLICT (username) DO NOTHING;
 
 -- เพิ่มประเภทเวรที่ตั้งค่าไว้จริง 5 รูปแบบ

@@ -19,8 +19,13 @@ export default function LoginView({ onLoginSuccess, onShowToast, api }) {
       setErrorMsg('');
       const res = await api.auth.login(username.trim(), password);
       localStorage.setItem('shiftflow_token', res.token);
-      onShowToast(`ยินดีต้อนรับคุณ ${res.user.full_name}`);
-      onLoginSuccess(res.user);
+      if (!res.must_change_password) {
+        onShowToast(`ยินดีต้อนรับคุณ ${res.user.full_name}`);
+      }
+      onLoginSuccess({
+        ...res.user,
+        must_change_password: Boolean(res.must_change_password || res.user.must_change_password)
+      });
     } catch (err) {
       setErrorMsg(err.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
     } finally {

@@ -18,8 +18,13 @@ function initDatabase() {
       role TEXT NOT NULL DEFAULT 'STAFF',
       position TEXT,
       phone TEXT,
+      must_change_password INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    try {
+      db.exec('ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0;');
+    } catch (e) {}
 
     CREATE TABLE IF NOT EXISTS shift_types (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

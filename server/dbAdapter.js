@@ -46,10 +46,38 @@ const dbAdapter = {
 
   async getUserById(id) {
     if (isSupabaseEnabled) {
-      const { data } = await supabase.from('users').select('id, username, full_name, role, position, phone').eq('id', id).single();
+      const { data } = await supabase.from('users').select('*').eq('id', id).single();
+      if (data) delete data.password_hash;
       return data;
     } else {
-      return sqliteDb.prepare('SELECT id, username, full_name, role, position, phone FROM users WHERE id = ?').get(id);
+      const user = sqliteDb.prepare('SELECT * FROM users WHERE id = ?').get(id);
+      if (user) delete user.password_hash;
+      return user;
+    }
+  },
+
+  async changePassword(userId, newPassword) {
+    const hash = bcrypt.hashSync(newPassword, 10);
+    if (isSupabaseEnabled) {
+      let { error } = await supabase.from('users').update({
+        password_hash: hash,
+        must_change_password: 0
+      }).eq('id', userId);
+
+      if (error && error.code === '42703') {
+        const retry = await supabase.from('users').update({ password_hash: hash }).eq('id', userId);
+        if (retry.error) throw retry.error;
+      } else if (error) {
+        throw error;
+      }
+      return { success: true };
+    } else {
+      try {
+        sqliteDb.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?').run(hash, userId);
+      } catch (e) {
+        sqliteDb.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId);
+      }
+      return { success: true };
     }
   },
 
@@ -609,21 +637,29 @@ const dbAdapter = {
   async createAdminUser({ username, password, full_name, role, position, phone }) {
     const hash = bcrypt.hashSync(password, 10);
     if (isSupabaseEnabled) {
-      const { error } = await supabase.from('users').insert({
+      const insertData = {
         username: username.trim().toLowerCase(),
         password_hash: hash,
         full_name: full_name.trim(),
         role: role || 'STAFF',
         position: position || '',
-        phone: phone || ''
-      });
-      if (error) throw new Error('ชื่อผู้ใช้งาน (Username) นี้มีอยู่แล้วในระบบ');
+        phone: phone || '',
+        must_change_password: 1
+      };
+      let { error } = await supabase.from('users').insert(insertData);
+      if (error && error.code === '42703') {
+        delete insertData.must_change_password;
+        const retry = await supabase.from('users').insert(insertData);
+        if (retry.error) throw new Error('ชื่อผู้ใช้งาน (Username) นี้มีอยู่แล้วในระบบ');
+      } else if (error) {
+        throw new Error('ชื่อผู้ใช้งาน (Username) นี้มีอยู่แล้วในระบบ');
+      }
       return { success: true };
     } else {
       try {
         sqliteDb.prepare(`
-          INSERT INTO users (username, password_hash, full_name, role, position, phone)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO users (username, password_hash, full_name, role, position, phone, must_change_password)
+          VALUES (?, ?, ?, ?, ?, ?, 1)
         `).run(username.trim().toLowerCase(), hash, full_name.trim(), role || 'STAFF', position || '', phone || '');
         return { success: true };
       } catch (err) {
@@ -637,16 +673,28 @@ const dbAdapter = {
       const updateData = { full_name, role, position, phone };
       if (new_password) {
         updateData.password_hash = bcrypt.hashSync(new_password, 10);
+        updateData.must_change_password = 1;
       }
-      await supabase.from('users').update(updateData).eq('id', id);
+      let { error } = await supabase.from('users').update(updateData).eq('id', id);
+      if (error && error.code === '42703' && updateData.must_change_password) {
+        delete updateData.must_change_password;
+        await supabase.from('users').update(updateData).eq('id', id);
+      }
       return { success: true };
     } else {
       if (new_password) {
         const hash = bcrypt.hashSync(new_password, 10);
-        sqliteDb.prepare(`
-          UPDATE users SET full_name = ?, role = ?, position = ?, phone = ?, password_hash = ?
-          WHERE id = ?
-        `).run(full_name, role, position, phone, hash, id);
+        try {
+          sqliteDb.prepare(`
+            UPDATE users SET full_name = ?, role = ?, position = ?, phone = ?, password_hash = ?, must_change_password = 1
+            WHERE id = ?
+          `).run(full_name, role, position, phone, hash, id);
+        } catch (e) {
+          sqliteDb.prepare(`
+            UPDATE users SET full_name = ?, role = ?, position = ?, phone = ?, password_hash = ?
+            WHERE id = ?
+          `).run(full_name, role, position, phone, hash, id);
+        }
       } else {
         sqliteDb.prepare(`
           UPDATE users SET full_name = ?, role = ?, position = ?, phone = ?

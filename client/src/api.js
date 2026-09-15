@@ -31,6 +31,10 @@ export const api = {
       }),
     me: () => fetchJson(`${API_BASE}/auth/me`),
     getUsers: () => fetchJson(`${API_BASE}/auth/users`),
+    changePassword: (data) => fetchJson(`${API_BASE}/auth/change-password`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
   },
 
   shifts: {

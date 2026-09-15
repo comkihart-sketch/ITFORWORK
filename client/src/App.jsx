@@ -6,6 +6,7 @@ import ShiftAndSwapView from './components/ShiftAndSwapView';
 import DailyNotesView from './components/DailyNotesView';
 import AdminSettingsView from './components/AdminSettingsView';
 import LoginView from './components/LoginView';
+import ForceChangePasswordModal from './components/ForceChangePasswordModal';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -132,6 +133,18 @@ export default function App() {
     }
   }
 
+  function handlePasswordChanged(res) {
+    if (res.token) {
+      localStorage.setItem('shiftflow_token', res.token);
+    }
+    setCurrentUser(prev => ({
+      ...prev,
+      ...res.user,
+      must_change_password: false
+    }));
+    showToast('🎉 บันทึกรหัสผ่านใหม่เรียบร้อยแล้ว ยินดีต้อนรับเข้าสู่ระบบ!');
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
@@ -231,6 +244,16 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Force Change Password Modal for First-time / Admin Reset Login */}
+      {currentUser && currentUser.must_change_password && (
+        <ForceChangePasswordModal
+          currentUser={currentUser}
+          onPasswordChanged={handlePasswordChanged}
+          onLogout={handleLogout}
+          api={api}
+        />
+      )}
 
       {/* Global Toast Notification */}
       {toast && (
