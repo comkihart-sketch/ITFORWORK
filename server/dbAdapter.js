@@ -2,8 +2,8 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_API_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || 'https://bctyjfizqnnwdghybfha.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_API_KEY || 'sb_publishable_izGd1wrMM0kjTdkLL8v2LQ_JFptbjEp';
 const isSupabaseEnabled = Boolean(supabaseUrl && supabaseKey);
 
 let supabase = null;
@@ -19,9 +19,13 @@ if (isSupabaseEnabled) {
 // Fallback SQLite db
 let sqliteDb = null;
 if (!isSupabaseEnabled) {
-  const { db, initDatabase } = require('./db');
-  initDatabase();
-  sqliteDb = db;
+  try {
+    const { db, initDatabase } = require('./db');
+    initDatabase();
+    sqliteDb = db;
+  } catch (err) {
+    console.warn('⚠️ SQLite fallback unavailable in serverless environment:', err.message);
+  }
 }
 
 const dbAdapter = {

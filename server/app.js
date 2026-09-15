@@ -4,7 +4,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const path = require('node:path');
+const path = require('path');
 const { dbAdapter } = require('./dbAdapter');
 
 const app = express();
