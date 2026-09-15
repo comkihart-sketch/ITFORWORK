@@ -6,6 +6,12 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const { dbAdapter } = require('./dbAdapter');
+const {
+  notifySwapRequested,
+  notifySwapApproved,
+  notifySwapRejected,
+  notifyShiftChanged
+} = require('./notifyService');
 
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET || 'shiftflow_super_secret_key_2026';
@@ -159,12 +165,21 @@ app.post('/api/shifts', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'กรุณาระบุประเภทเวรและวันที่' });
     }
 
-    await dbAdapter.saveShift({
+    const shiftResult = await dbAdapter.saveShift({
       user_id: targetUserId,
       shift_type_id,
       shift_date,
       note
     });
+
+    // Notify Discord in background
+    notifyShiftChanged({
+      actor: req.user,
+      targetUser: shiftResult.targetUser,
+      shiftDate: shift_date,
+      shiftType: shiftResult.shiftType,
+      note
+    }).catch(e => console.error('[Notify] Shift notification error:', e.message));
 
     res.json({ success: true, message: 'บันทึกการลงเวรสำเร็จ' });
   } catch (err) {
@@ -193,12 +208,22 @@ app.post('/api/swaps/request', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'ไม่สามารถขอสลับเวรกับตนเองได้' });
     }
 
-    await dbAdapter.createSwapRequest({
+    const swapResult = await dbAdapter.createSwapRequest({
       requester_id,
       target_user_id: parseInt(target_user_id),
       shift_date,
       reason
     });
+
+    // Notify Discord in background
+    notifySwapRequested({
+      requester: swapResult.requester,
+      targetUser: swapResult.targetUser,
+      shiftDate: swapResult.shift_date,
+      requesterShift: swapResult.requesterShiftName,
+      targetShift: swapResult.targetShiftName,
+      reason
+    }).catch(e => console.error('[Notify] Swap request notification error:', e.message));
 
     res.json({ success: true, message: 'ส่งคำขอสลับเวรเรียบร้อยแล้ว รอการอนุมัติจากเพื่อนร่วมงาน' });
   } catch (err) {
@@ -208,7 +233,18 @@ app.post('/api/swaps/request', authenticateToken, async (req, res) => {
 
 app.post('/api/swaps/:id/approve', authenticateToken, async (req, res) => {
   try {
-    await dbAdapter.approveSwap(req.params.id, req.user);
+    const approveResult = await dbAdapter.approveSwap(req.params.id, req.user);
+
+    // Notify Discord in background
+    notifySwapApproved({
+      approver: req.user,
+      requester: approveResult.requester,
+      targetUser: approveResult.targetUser,
+      shiftDate: approveResult.shift_date,
+      requesterShift: approveResult.requesterShiftName,
+      targetShift: approveResult.targetShiftName
+    }).catch(e => console.error('[Notify] Swap approve notification error:', e.message));
+
     res.json({ success: true, message: 'อนุมัติการสลับเวรเรียบร้อยแล้ว ตารางเวรอัปเดตพร้อมแสดงตราประทับสลับเวร' });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -218,7 +254,16 @@ app.post('/api/swaps/:id/approve', authenticateToken, async (req, res) => {
 app.post('/api/swaps/:id/reject', authenticateToken, async (req, res) => {
   try {
     const { response_note } = req.body;
-    await dbAdapter.rejectSwap(req.params.id, response_note, req.user);
+    const rejectResult = await dbAdapter.rejectSwap(req.params.id, response_note, req.user);
+
+    // Notify Discord in background
+    notifySwapRejected({
+      rejector: req.user,
+      requester: rejectResult.requester,
+      shiftDate: rejectResult.shift_date,
+      reason: response_note
+    }).catch(e => console.error('[Notify] Swap reject notification error:', e.message));
+
     res.json({ success: true, message: 'ปฏิเสธคำขอสลับเวรเรียบร้อยแล้ว' });
   } catch (err) {
     res.status(400).json({ error: err.message });

@@ -90,6 +90,26 @@ const dbAdapter = {
     }
   },
 
+  async getUserInfo(id) {
+    if (!id) return { full_name: 'เจ้าหน้าที่', username: '-' };
+    if (isSupabaseEnabled) {
+      const { data } = await supabase.from('users').select('id, username, full_name, role').eq('id', id).maybeSingle();
+      return data || { id, full_name: 'เจ้าหน้าที่', username: '-' };
+    } else {
+      return sqliteDb.prepare('SELECT id, username, full_name, role FROM users WHERE id = ?').get(id) || { id, full_name: 'เจ้าหน้าที่', username: '-' };
+    }
+  },
+
+  async getShiftTypeInfo(id) {
+    if (!id) return { name: 'เวร', code: '-' };
+    if (isSupabaseEnabled) {
+      const { data } = await supabase.from('shift_types').select('id, name, code, start_time, end_time').eq('id', id).maybeSingle();
+      return data || { id, name: 'เวร', code: '-' };
+    } else {
+      return sqliteDb.prepare('SELECT id, name, code, start_time, end_time FROM shift_types WHERE id = ?').get(id) || { id, name: 'เวร', code: '-' };
+    }
+  },
+
   // ----------------------------------------------------
   // SHIFTS
   // ----------------------------------------------------
@@ -179,7 +199,9 @@ const dbAdapter = {
         });
         if (error) throw error;
       }
-      return { success: true };
+      const targetUser = await this.getUserInfo(user_id);
+      const shiftType = await this.getShiftTypeInfo(shift_type_id);
+      return { success: true, targetUser, shiftType, shift_date, note };
     } else {
       const existing = sqliteDb.prepare('SELECT id FROM shifts WHERE user_id = ? AND shift_date = ?').get(user_id, shift_date);
       if (existing) {
@@ -194,7 +216,9 @@ const dbAdapter = {
           VALUES (?, ?, ?, ?)
         `).run(user_id, shift_type_id, shift_date, note || null);
       }
-      return { success: true };
+      const targetUser = await this.getUserInfo(user_id);
+      const shiftType = await this.getShiftTypeInfo(shift_type_id);
+      return { success: true, targetUser, shiftType, shift_date, note };
     }
   },
 
@@ -277,7 +301,20 @@ const dbAdapter = {
         status: 'PENDING'
       });
       if (error) throw error;
-      return { success: true };
+      const targetUser = await this.getUserInfo(target_user_id);
+      const requester = await this.getUserInfo(requester_id);
+      const reqShiftType = await this.getShiftTypeInfo(reqShift.shift_type_id);
+      const tgtShiftType = await this.getShiftTypeInfo(tgtShift.shift_type_id);
+
+      return {
+        success: true,
+        requester,
+        targetUser,
+        shift_date,
+        requesterShiftName: `${reqShiftType.name} (${reqShiftType.code})`,
+        targetShiftName: `${tgtShiftType.name} (${tgtShiftType.code})`,
+        reason
+      };
     } else {
       const reqShift = sqliteDb.prepare('SELECT shift_type_id FROM shifts WHERE user_id = ? AND shift_date = ?').get(requester_id, shift_date);
       const tgtShift = sqliteDb.prepare('SELECT shift_type_id FROM shifts WHERE user_id = ? AND shift_date = ?').get(target_user_id, shift_date);
@@ -298,7 +335,20 @@ const dbAdapter = {
         VALUES (?, ?, ?, ?, ?, ?, 'PENDING')
       `).run(requester_id, target_user_id, shift_date, reqShift.shift_type_id, tgtShift.shift_type_id, reason || null);
 
-      return { success: true };
+      const targetUser = await this.getUserInfo(target_user_id);
+      const requester = await this.getUserInfo(requester_id);
+      const reqShiftType = await this.getShiftTypeInfo(reqShift.shift_type_id);
+      const tgtShiftType = await this.getShiftTypeInfo(tgtShift.shift_type_id);
+
+      return {
+        success: true,
+        requester,
+        targetUser,
+        shift_date,
+        requesterShiftName: `${reqShiftType.name} (${reqShiftType.code})`,
+        targetShiftName: `${tgtShiftType.name} (${tgtShiftType.code})`,
+        reason
+      };
     }
   },
 
@@ -334,7 +384,19 @@ const dbAdapter = {
         responded_at: new Date().toISOString()
       }).eq('id', swapId);
 
-      return { success: true };
+      const requester = await this.getUserInfo(swap.requester_id);
+      const targetUser = await this.getUserInfo(swap.target_user_id);
+      const reqShiftType = await this.getShiftTypeInfo(reqShift.shift_type_id);
+      const tgtShiftType = await this.getShiftTypeInfo(tgtShift.shift_type_id);
+
+      return {
+        success: true,
+        requester,
+        targetUser,
+        shift_date: swap.shift_date,
+        requesterShiftName: `${reqShiftType.name} (${reqShiftType.code})`,
+        targetShiftName: `${tgtShiftType.name} (${tgtShiftType.code})`
+      };
     } else {
       const swap = sqliteDb.prepare('SELECT * FROM shift_swaps WHERE id = ?').get(swapId);
       if (!swap) throw new Error('ไม่พบรายการคำขอนี้');
@@ -357,7 +419,20 @@ const dbAdapter = {
           .run('APPROVED', swapId);
 
         sqliteDb.exec('COMMIT;');
-        return { success: true };
+
+        const requester = await this.getUserInfo(swap.requester_id);
+        const targetUser = await this.getUserInfo(swap.target_user_id);
+        const reqShiftType = await this.getShiftTypeInfo(reqShift.shift_type_id);
+        const tgtShiftType = await this.getShiftTypeInfo(tgtShift.shift_type_id);
+
+        return {
+          success: true,
+          requester,
+          targetUser,
+          shift_date: swap.shift_date,
+          requesterShiftName: `${reqShiftType.name} (${reqShiftType.code})`,
+          targetShiftName: `${tgtShiftType.name} (${tgtShiftType.code})`
+        };
       } catch (err) {
         sqliteDb.exec('ROLLBACK;');
         throw err;
@@ -380,7 +455,16 @@ const dbAdapter = {
         responded_at: new Date().toISOString()
       }).eq('id', swapId);
 
-      return { success: true };
+      const requester = await this.getUserInfo(swap.requester_id);
+      const targetUser = await this.getUserInfo(swap.target_user_id);
+
+      return {
+        success: true,
+        requester,
+        targetUser,
+        shift_date: swap.shift_date,
+        response_note: responseNote || 'ไม่สะดวกสลับเวร'
+      };
     } else {
       const swap = sqliteDb.prepare('SELECT * FROM shift_swaps WHERE id = ?').get(swapId);
       if (!swap) throw new Error('ไม่พบรายการคำขอนี้');
@@ -392,7 +476,16 @@ const dbAdapter = {
       sqliteDb.prepare('UPDATE shift_swaps SET status = ?, response_note = ?, responded_at = CURRENT_TIMESTAMP WHERE id = ?')
         .run('REJECTED', responseNote || 'ไม่สะดวกสลับเวร', swapId);
 
-      return { success: true };
+      const requester = await this.getUserInfo(swap.requester_id);
+      const targetUser = await this.getUserInfo(swap.target_user_id);
+
+      return {
+        success: true,
+        requester,
+        targetUser,
+        shift_date: swap.shift_date,
+        response_note: responseNote || 'ไม่สะดวกสลับเวร'
+      };
     }
   },
 
