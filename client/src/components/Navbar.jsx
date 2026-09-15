@@ -32,24 +32,8 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* User Profile & Demo Switcher */}
+        {/* User Profile & Actions */}
         <div className="flex items-center space-x-3">
-          
-          {/* Fast Switch User Selector (Demo & Test) */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-            <span className="text-slate-500 px-2 font-medium hidden md:inline">สลับบัญชีทดสอบ:</span>
-            <select
-              value={currentUser?.id || ''}
-              onChange={(e) => onSwitchUser(parseInt(e.target.value))}
-              className="bg-white text-slate-800 font-semibold px-2 py-1 rounded-lg border border-slate-200 outline-none cursor-pointer text-xs"
-            >
-              {allUsers.map(u => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name} ({u.role === 'ADMIN' ? 'Admin' : 'Staff'})
-                </option>
-              ))}
-            </select>
-          </div>
 
           {/* Pending Notification Button */}
           <button

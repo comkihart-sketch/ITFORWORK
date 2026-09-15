@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Lock, User, LogIn, Calendar, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Lock, User, LogIn, Calendar, AlertCircle } from 'lucide-react';
 
 export default function LoginView({ onLoginSuccess, onShowToast, api }) {
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -96,24 +96,6 @@ export default function LoginView({ onLoginSuccess, onShowToast, api }) {
             <span>{isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ (Sign In)'}</span>
           </button>
         </form>
-
-        {/* Initial Setup Info Callout */}
-        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-1.5 text-[11px] text-slate-600">
-          <div className="font-bold text-slate-800 flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-indigo-600" />
-            <span>ข้อมูลการเข้าสู่ระบบเริ่มต้น (Default Admin)</span>
-          </div>
-          <p className="text-slate-500 leading-relaxed">
-            ผู้ดูแลระบบสามารถเข้าสู่ระบบครั้งแรกด้วย:
-            <br />
-            • Username: <code className="bg-white px-1.5 py-0.5 rounded border font-semibold text-slate-800">admin</code>
-            <br />
-            • Password: <code className="bg-white px-1.5 py-0.5 rounded border font-semibold text-slate-800">1234</code>
-          </p>
-          <p className="text-[10px] text-indigo-700 pt-1">
-            * หลังจากเข้าสู่ระบบแล้ว สามารถเพิ่มรายชื่อพนักงานในแผนก และเปลี่ยนรหัสผ่านได้ที่เมนู <b>"4. เมนูตั้งค่า (Admin Settings)"</b>
-          </p>
-        </div>
 
       </div>
 
