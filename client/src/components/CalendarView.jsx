@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, RefreshCw, Info, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function CalendarView({
@@ -14,6 +14,7 @@ export default function CalendarView({
 }) {
   const [selectedShiftForDetail, setSelectedShiftForDetail] = useState(null);
   const [filterUserId, setFilterUserId] = useState('ALL');
+  const scrollContainerRef = useRef(null);
 
   // Parse Year and Month
   const [year, month] = useMemo(() => {
@@ -89,6 +90,26 @@ export default function CalendarView({
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   }, []);
+
+  // Scroll to Today's column when the component mounts or month changes
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      // Use setTimeout to allow DOM to render first
+      setTimeout(() => {
+        const todayEl = scrollContainerRef.current.querySelector('#today-col');
+        if (todayEl) {
+          const container = scrollContainerRef.current;
+          // Calculate the scroll position to center the 'Today' column
+          const scrollTarget = todayEl.offsetLeft - (container.clientWidth / 2) + (todayEl.clientWidth / 2);
+          
+          container.scrollTo({
+            left: Math.max(0, scrollTarget),
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+    }
+  }, [month, year, dateList, filterUserId]);
 
   return (
     <div className="space-y-6">
@@ -198,7 +219,7 @@ export default function CalendarView({
         </div>
 
         {/* Scrollable Matrix */}
-        <div className="overflow-x-auto custom-scrollbar">
+        <div ref={scrollContainerRef} className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-xs border-collapse min-w-[1200px]">
             <thead>
               <tr className="bg-slate-50 text-slate-600 border-b border-slate-200">
@@ -224,7 +245,7 @@ export default function CalendarView({
                   }
 
                   return (
-                    <th key={d.dateStr} className={thClass} title={holiday ? holiday.name : ''}>
+                    <th key={d.dateStr} id={isToday ? 'today-col' : undefined} className={thClass} title={holiday ? holiday.name : ''}>
                       {isToday && (
                         <span className="text-[9px] block text-indigo-600 font-bold uppercase tracking-wider mb-0.5">
                           วันนี้
