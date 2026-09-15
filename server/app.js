@@ -454,14 +454,15 @@ app.get('/api/shortcut/check-shift', async (req, res) => {
     const localTime = new Date(today.getTime() + tzOffset * 60 * 1000);
     const dateStr = localTime.toISOString().split('T')[0];
 
-    // Fetch User's Shifts
-    const shifts = await dbAdapter.getAllShifts();
+    // Fetch User's Shifts for the current month
+    const monthStr = dateStr.substring(0, 7);
+    const shifts = await dbAdapter.getShifts(monthStr);
     const todayShift = shifts.find(s => s.user_id === user.id && s.shift_date === dateStr);
     
     if (!todayShift) return res.send('NO');
 
     // Get Shift Type details
-    const shiftTypes = await dbAdapter.getAllShiftTypes();
+    const shiftTypes = await dbAdapter.getShiftTypes();
     const sType = shiftTypes.find(t => t.id === todayShift.shift_type_id);
     
     if (!sType) return res.send('NO');
