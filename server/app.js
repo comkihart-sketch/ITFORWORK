@@ -435,6 +435,59 @@ app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, 
   }
 });
 
+// ==========================================
+// 🚀 iOS Shortcuts API Integration
+// ==========================================
+app.get('/api/shortcut/check-shift', async (req, res) => {
+  try {
+    const { username, period } = req.query; // period = 'morning' | 'afternoon'
+    if (!username) return res.send('NO');
+
+    // Find User
+    const users = await dbAdapter.getAllUsers();
+    const user = users.find(u => u.username === username);
+    if (!user) return res.send('NO');
+
+    // Get Today's String (Thailand Time)
+    const today = new Date();
+    const tzOffset = 7 * 60; // +7 hours for Thailand
+    const localTime = new Date(today.getTime() + tzOffset * 60 * 1000);
+    const dateStr = localTime.toISOString().split('T')[0];
+
+    // Fetch User's Shifts
+    const shifts = await dbAdapter.getAllShifts();
+    const todayShift = shifts.find(s => s.user_id === user.id && s.shift_date === dateStr);
+    
+    if (!todayShift) return res.send('NO');
+
+    // Get Shift Type details
+    const shiftTypes = await dbAdapter.getAllShiftTypes();
+    const sType = shiftTypes.find(t => t.id === todayShift.shift_type_id);
+    
+    if (!sType) return res.send('NO');
+
+    // Determine Logic
+    // Morning shifts typically contain "เช้า" or code "M05", "M10"
+    // Afternoon shifts typically contain "บ่าย" or code "M09", "M10"
+    const name = sType.name || '';
+    const code = sType.code || '';
+    
+    const isMorning = name.includes('เช้า') || code === 'M05' || code === 'M10';
+    const isAfternoon = name.includes('บ่าย') || code === 'M09' || code === 'M10';
+
+    if (period === 'morning' && isMorning) {
+      return res.send(`YES|${code} (${name})`);
+    }
+    if (period === 'afternoon' && isAfternoon) {
+      return res.send(`YES|${code} (${name})`);
+    }
+
+    res.send('NO');
+  } catch (err) {
+    res.send('NO');
+  }
+});
+
 // Serve frontend in production or if static build exists
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 app.use(express.static(clientDist));
