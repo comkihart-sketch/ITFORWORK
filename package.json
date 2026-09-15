@@ -5,8 +5,8 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "build": "npm --prefix client install && npm --prefix client run build",
-    "dev:client": "npm --prefix client run dev",
+    "build": "cd client && npm install && npm run build",
+    "dev:client": "cd client && npm run dev",
     "dev:server": "node server/index.js",
     "push": "node scripts/push.js"
   },
@@ -29,6 +29,7 @@
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
-    "isomorphic-git": "^1.42.2"
+    "isomorphic-git": "^1.42.2",
+    "vite": "^8.3.0"
   }
 }
