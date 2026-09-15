@@ -309,11 +309,11 @@ export default function ShiftAndSwapView({
         <div className="space-y-4">
           
           {/* Calendar Toolbar */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap justify-between items-center gap-4">
+          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row justify-between items-center gap-4 lg:gap-3">
             
             {/* Month Navigation */}
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full lg:w-auto justify-center lg:justify-start">
+              <div className="flex items-center justify-between sm:justify-start bg-slate-100 rounded-xl p-1 border border-slate-200 w-full sm:w-auto">
                 <button
                   onClick={() => onChangeMonth(-1)}
                   title="เดือนก่อนหน้า"
@@ -321,7 +321,7 @@ export default function ShiftAndSwapView({
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="px-4 py-1 text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <span className="px-4 py-1 text-sm font-bold text-slate-800 flex items-center gap-1.5 justify-center flex-1 sm:flex-none">
                   <CalendarIcon className="w-4 h-4 text-indigo-600" />
                   {thaiMonthNames[month]} {year + 543}
                 </span>
@@ -342,14 +342,14 @@ export default function ShiftAndSwapView({
                     onChangeMonth(0, curStr);
                   }
                 }}
-                className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition"
+                className="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition"
               >
                 เดือนปัจจุบัน
               </button>
             </div>
 
             {/* Quick Summary of User's Shifts */}
-            <div className="flex items-center flex-wrap gap-2 text-xs">
+            <div className="flex items-center justify-center flex-wrap gap-2 text-xs w-full lg:w-auto flex-1">
               <span className="text-slate-500 font-medium">เวรของคุณเดือนนี้:</span>
               <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 font-bold border border-indigo-200">
                 รวม {myShiftsSummary.total} กะ
@@ -368,11 +368,11 @@ export default function ShiftAndSwapView({
               })}
             </div>
 
-            {/* Hint */}
-            <div className="text-[11px] text-slate-500 flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-amber-800">
-              <span>💡 คลิกที่ช่องวันในปฏิทิน เพื่อลงเวรหรือเปลี่ยนเวรได้ทันที</span>
-            </div>
+          </div>
 
+          {/* Hint */}
+          <div className="text-[11px] text-slate-500 flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-amber-800">
+            <span>💡 คลิกที่ช่องวันในปฏิทิน เพื่อลงเวรหรือเปลี่ยนเวรได้ทันที</span>
           </div>
 
           {/* 7-Columns Calendar Grid */}

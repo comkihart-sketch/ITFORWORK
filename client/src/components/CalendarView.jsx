@@ -93,11 +93,11 @@ export default function CalendarView({
   return (
     <div className="space-y-6">
       {/* Top Toolbar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap justify-between items-center gap-4">
+      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row justify-between items-center gap-4 lg:gap-3">
         
-        {/* Month Selector */}
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+        {/* Month Selector (Center on mobile, Left on desktop) */}
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full lg:w-auto justify-center lg:justify-start">
+          <div className="flex items-center justify-between sm:justify-start bg-slate-100 rounded-xl p-1 border border-slate-200 w-full sm:w-auto">
             <button
               onClick={() => onChangeMonth(-1)}
               title="เดือนก่อนหน้า"
@@ -105,7 +105,7 @@ export default function CalendarView({
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-4 py-1 text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <span className="px-4 py-1 text-sm font-bold text-slate-800 flex items-center gap-1.5 justify-center flex-1 sm:flex-none">
               <CalendarIcon className="w-4 h-4 text-indigo-600" />
               {thaiMonthNames[month]} {year + 543}
             </span>
@@ -127,14 +127,14 @@ export default function CalendarView({
                 onChangeMonth(0, curStr);
               }
             }}
-            className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition"
+            className="w-full sm:w-auto px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition"
           >
             เดือนปัจจุบัน
           </button>
         </div>
 
-        {/* Shift Types Legend */}
-        <div className="flex items-center flex-wrap gap-2 text-xs">
+        {/* Shift Types Legend (Center aligned) */}
+        <div className="flex items-center justify-center flex-wrap gap-2 text-xs w-full lg:w-auto flex-1">
           <span className="text-slate-500 font-medium">สัญลักษณ์เวร:</span>
           {shiftTypes.map(st => (
             <span
@@ -150,14 +150,14 @@ export default function CalendarView({
           </span>
         </div>
 
-        {/* Actions & Filters */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center text-xs">
-            <span className="text-slate-500 mr-2 font-medium">กรองพนักงาน:</span>
+        {/* Actions & Filters (Right aligned on desktop, center on mobile) */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto justify-center lg:justify-end">
+          <div className="flex items-center text-xs w-full sm:w-auto justify-center">
+            <span className="text-slate-500 mr-2 font-medium whitespace-nowrap">กรองพนักงาน:</span>
             <select
               value={filterUserId}
               onChange={(e) => setFilterUserId(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500"
+              className="flex-1 sm:flex-none bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 sm:py-1.5 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500 min-w-[140px]"
             >
               <option value="ALL">ทุกคนในแผนก ({allUsers.length} คน)</option>
               {allUsers.map(u => (
@@ -168,7 +168,7 @@ export default function CalendarView({
 
           <button
             onClick={onGoToSwap}
-            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+            className="w-full sm:w-auto justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>ลงเวร / สลับเวร</span>
