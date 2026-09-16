@@ -172,7 +172,8 @@ app.post('/api/shifts', authenticateToken, async (req, res) => {
       note
     });
 
-    // Notify Discord in background
+    // Notify Discord in background (Disabled per user request)
+    /* 
     notifyShiftChanged({
       actor: req.user,
       targetUser: shiftResult.targetUser,
@@ -180,6 +181,7 @@ app.post('/api/shifts', authenticateToken, async (req, res) => {
       shiftType: shiftResult.shiftType,
       note
     }).catch(e => console.error('[Notify] Shift notification error:', e.message));
+    */
 
     res.json({ success: true, message: 'บันทึกการลงเวรสำเร็จ' });
   } catch (err) {
