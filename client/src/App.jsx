@@ -189,6 +189,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         pendingSwapCount={pendingSwapCount}
         onLogout={handleLogout}
+        onRefresh={loadAppData}
       />
 
       {/* Main Content Area */}

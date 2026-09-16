@@ -8,9 +8,21 @@ export default function Navbar({
   activeTab, 
   setActiveTab, 
   pendingSwapCount,
-  onLogout 
+  onLogout,
+  onRefresh
 }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      setIsRefreshing(true);
+      await onRefresh();
+      setTimeout(() => setIsRefreshing(false), 500);
+    } else {
+      window.location.reload();
+    }
+  };
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
@@ -33,7 +45,16 @@ export default function Navbar({
         </div>
 
         {/* User Profile & Actions */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-1 sm:space-x-3">
+
+          {/* Refresh Button */}
+          <button
+            onClick={handleRefresh}
+            title="รีเฟรชข้อมูล"
+            className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-indigo-600 transition"
+          >
+            <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
+          </button>
 
           {/* Pending Notification Button */}
           <button
