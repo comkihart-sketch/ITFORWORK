@@ -7,6 +7,7 @@ import DailyNotesView from './components/DailyNotesView';
 import AdminSettingsView from './components/AdminSettingsView';
 import LoginView from './components/LoginView';
 import ForceChangePasswordModal from './components/ForceChangePasswordModal';
+import ExportView from './components/ExportView';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -178,6 +179,19 @@ export default function App() {
     );
   }
 
+  // Handle full-screen Export View
+  if (activeTab === 'export') {
+    return (
+      <ExportView
+        allUsers={allUsers}
+        shifts={shifts}
+        shiftTypes={shiftTypes}
+        currentMonthStr={currentMonthStr}
+        onClose={() => setActiveTab('admin')}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Navbar */}
@@ -242,6 +256,7 @@ export default function App() {
             onRefreshData={loadAppData}
             onShowToast={showToast}
             api={api}
+            setActiveTab={setActiveTab}
           />
         )}
       </main>

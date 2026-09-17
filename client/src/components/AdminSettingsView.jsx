@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Plus, Edit2, Trash2, ShieldAlert, Users, Calendar, Clock, Key } from 'lucide-react';
+import { Settings, Plus, Edit2, Trash2, ShieldAlert, Users, Calendar, Clock, Key, Printer } from 'lucide-react';
 
 export default function AdminSettingsView({
   currentUser,
@@ -7,7 +7,8 @@ export default function AdminSettingsView({
   holidays = [],
   onRefreshData,
   onShowToast,
-  api
+  api,
+  setActiveTab
 }) {
   const isAdmin = currentUser?.role === 'ADMIN';
 
@@ -170,42 +171,54 @@ export default function AdminSettingsView({
       )}
 
       {/* Sub-tabs header */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-        <button
-          onClick={() => setAdminTab('shifts')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-            adminTab === 'shifts'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          <span>1. จัดการประเภทเวร (Shift Types)</span>
-        </button>
+      <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAdminTab('shifts')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+              adminTab === 'shifts'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>1. จัดการประเภทเวร (Shift Types)</span>
+          </button>
 
-        <button
-          onClick={() => setAdminTab('holidays')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-            adminTab === 'holidays'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          <span>2. จัดการวันหยุด (Holidays)</span>
-        </button>
+          <button
+            onClick={() => setAdminTab('holidays')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+              adminTab === 'holidays'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>2. จัดการวันหยุด (Holidays)</span>
+          </button>
 
-        <button
-          onClick={() => setAdminTab('users')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-            adminTab === 'users'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>3. รายชื่อบุคลากร (Staff Accounts)</span>
-        </button>
+          <button
+            onClick={() => setAdminTab('users')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+              adminTab === 'users'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>3. รายชื่อบุคลากร (Staff Accounts)</span>
+          </button>
+        </div>
+        
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('export')}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md transition"
+          >
+            <Printer className="w-4 h-4" />
+            พิมพ์ตารางปฏิบัติงาน
+          </button>
+        )}
       </div>
 
       {/* ========================================================= */}
