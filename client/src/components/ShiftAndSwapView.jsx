@@ -930,9 +930,17 @@ export default function ShiftAndSwapView({
                 onClick={() => {
                   if (formUrl) {
                     if (formUrl.startsWith('data:')) {
+                      let ext = '.pdf'; // default
+                      if (formUrl.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) ext = '.docx';
+                      else if (formUrl.includes('application/msword')) ext = '.doc';
+                      else if (formUrl.includes('image/png')) ext = '.png';
+                      else if (formUrl.includes('image/jpeg')) ext = '.jpg';
+                      else if (formUrl.includes('application/vnd.ms-excel')) ext = '.xls';
+                      else if (formUrl.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) ext = '.xlsx';
+
                       const link = document.createElement('a');
                       link.href = formUrl;
-                      link.download = 'แบบฟอร์มชี้แจงการลา.pdf';
+                      link.download = `แบบฟอร์มชี้แจงการลา${ext}`;
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
