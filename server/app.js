@@ -239,17 +239,37 @@ app.post('/api/shifts', authenticateToken, async (req, res) => {
       // 2. Check max 4 OFF (X) days
       let maxOffStreak = 0;
       let currentOffStreak = 0;
-      for (let i = -4; i <= 4; i++) {
+      let maxNonWorkStreak = 0;
+      let currentNonWorkStreak = 0;
+
+      for (let i = -6; i <= 6; i++) { // Check window for both streaks
         const dStr = getOffsetDateStr(shift_date, i);
-        if (getType(userShiftMap[dStr]) === 'OFF') {
+        const t = getType(userShiftMap[dStr]);
+        
+        // Pure 'X' (OFF) streak
+        if (t === 'OFF') {
           currentOffStreak++;
           if (currentOffStreak > maxOffStreak) maxOffStreak = currentOffStreak;
         } else {
           currentOffStreak = 0;
         }
+
+        // Combined OFF + LEAVE streak (X + V)
+        if (t === 'OFF' || t === 'LEAVE') {
+          currentNonWorkStreak++;
+          if (currentNonWorkStreak > maxNonWorkStreak) maxNonWorkStreak = currentNonWorkStreak;
+        } else {
+          currentNonWorkStreak = 0;
+        }
       }
+
       if (maxOffStreak >= 5) {
-        return res.status(400).json({ error: 'ห้ามหยุด (X) ติดต่อกันเกิน 4 วัน หากจำเป็นต้องใช้พักร้อน (V) มาคั่น และต้องเขียนหนังสือชี้แจง (ดาวน์โหลดแบบฟอร์มได้ที่เมนู Admin)' });
+        return res.status(400).json({ error: 'ห้ามหยุด (X) ติดต่อกันเกิน 4 วัน หากต้องการหยุดต่อเนื่องต้องใช้สิทธิ์พักร้อน (V) มาคั่น' });
+      }
+
+      // If they successfully take >= 5 days off (using V to break the X streak), flag for popup
+      if (maxNonWorkStreak >= 5) {
+        req.requireFormPopup = true; // Pass this along to the response
       }
     }
     // --- STREAK VALIDATION END ---
@@ -261,18 +281,11 @@ app.post('/api/shifts', authenticateToken, async (req, res) => {
       note
     });
 
-    // Notify Discord in background (Disabled per user request)
-    /* 
-    notifyShiftChanged({
-      actor: req.user,
-      targetUser: shiftResult.targetUser,
-      shiftDate: shift_date,
-      shiftType: shiftResult.shiftType,
-      note
-    }).catch(e => console.error('[Notify] Shift notification error:', e.message));
-    */
-
-    res.json({ success: true, message: 'บันทึกการลงเวรสำเร็จ' });
+    res.json({ 
+      success: true, 
+      message: 'บันทึกการลงเวรสำเร็จ',
+      requireFormPopup: req.requireFormPopup || false
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -170,20 +170,22 @@ export default function ShiftAndSwapView({
 
     try {
       setIsSavingShift(true);
-      await api.shifts.save({
+      const resData = await api.shifts.save({
         shift_date: selectedDateForModal,
         shift_type_id: parseInt(selectedShiftTypeId),
         note: bookingNote
       });
+      
       onShowToast(`บันทึกเวรวันที่ ${selectedDateForModal} เรียบร้อยแล้ว`);
       setSelectedDateForModal(null);
       onRefreshData();
-    } catch (err) {
-      if (err.message && err.message.includes('เกิน 4 วัน')) {
+
+      // If the backend indicates this is a long leave (>=5 days combined), show the popup
+      if (resData && resData.requireFormPopup) {
         setShowExceedOffModal(true);
-      } else {
-        onShowToast(err.message, 'error');
       }
+    } catch (err) {
+      onShowToast(err.message, 'error');
     } finally {
       setIsSavingShift(false);
     }
@@ -907,9 +909,9 @@ export default function ShiftAndSwapView({
             <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-2">
               <AlertCircle className="w-8 h-8" />
             </div>
-            <h3 className="font-bold text-slate-900 text-lg">แจ้งเตือนหยุดเกินกำหนด</h3>
+            <h3 className="font-bold text-slate-900 text-lg">แจ้งเตือนการหยุดต่อเนื่อง</h3>
             <p className="text-sm text-slate-600">
-              คุณลงวันหยุด (X) ติดต่อกันเกิน 4 วัน 
+              คุณมีการลงวันหยุดต่อเนื่องเกิน 4 วัน (โดยใช้วันพักร้อน V คั่น) 
               <br/><br/>
               ต้องการดาวน์โหลดหรือพิมพ์เอกสารเพื่อเขียนหนังสือชี้แจงการลาหรือไม่?
             </p>
