@@ -521,6 +521,39 @@ export default function ShiftAndSwapView({
               </div>
             )}
 
+            {/* Team Members Shifts on this Date */}
+            {(() => {
+              const teamShifts = shifts.filter(s => s.shift_date === selectedDateForModal && s.user_id !== currentUser.id);
+              if (teamShifts.length > 0) {
+                return (
+                  <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    <label className="block text-[11px] font-semibold text-slate-600">เจ้าหน้าที่ท่านอื่นในวันนี้:</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {teamShifts.map(s => {
+                        const u = allUsers.find(u => u.id === s.user_id);
+                        const st = shiftTypes.find(type => type.id === s.shift_type_id);
+                        if (!u || !st) return null;
+                        
+                        // Avoid showing if the shift type is 'X' or 'V' to reduce clutter, 
+                        // unless requested. It's usually helpful to see everything though.
+                        return (
+                          <div 
+                            key={s.id} 
+                            className="flex items-center gap-1.5 px-2 py-1 rounded shadow-xs border"
+                            style={{ backgroundColor: st.color_bg, borderColor: st.color_border }}
+                          >
+                            <span className="font-bold text-[10px]" style={{ color: st.color_text }}>{st.code}</span>
+                            <span className="text-[10px] text-slate-700 truncate max-w-[80px]">{u.full_name.split(' ')[0]}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             {/* Shift Type Fast Picker Grid */}
             <form onSubmit={handleSaveShiftFromModal} className="space-y-4">
               <div>
