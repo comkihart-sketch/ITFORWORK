@@ -157,30 +157,74 @@ export default function AdminSettingsView({
 
   // Clarification Form State
   const [formUrl, setFormUrl] = useState('');
+  const [formFile, setFormFile] = useState(null);
+  const [currentFormType, setCurrentFormType] = useState('none'); // 'url', 'file', 'none'
+  const [isLoadingForm, setIsLoadingForm] = useState(false);
+
   useEffect(() => {
-    const configFormHoliday = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_URL:'));
-    if (configFormHoliday) {
-      setFormUrl(configFormHoliday.name.split('CONFIG_FORM_URL:')[1]);
+    const configUrl = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_URL:'));
+    const configFile = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_FILE:'));
+    
+    if (configFile) {
+      setCurrentFormType('file');
+      // We don't load the full base64 back into the input, just show it exists
+      setFormFile({ name: 'เอกสารที่อัปโหลดไว้แล้ว' });
+    } else if (configUrl) {
+      setCurrentFormType('url');
+      setFormUrl(configUrl.name.substring('CONFIG_FORM_URL:'.length));
     }
   }, [holidays]);
 
   async function handleSaveFormUrl() {
     try {
-      const existing = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_URL:'));
-      if (existing) {
-        await api.holidays.delete(existing.id);
+      setIsLoadingForm(true);
+      // Delete any existing config first
+      const existingConfigs = holidays.filter(h => h.holiday_date === '2099-12-31' && (h.name.startsWith('CONFIG_FORM_URL:') || h.name.startsWith('CONFIG_FORM_FILE:')));
+      for (const ex of existingConfigs) {
+        await api.holidays.delete(ex.id);
       }
-      if (formUrl.trim()) {
+
+      if (formFile && formFile.size) { // A real file object has size
+        // Convert file to base64
+        const reader = new FileReader();
+        reader.readAsDataURL(formFile);
+        reader.onload = async () => {
+          const base64Str = reader.result;
+          // Check size (~1.5MB base64 limit is usually safe for text columns)
+          if (base64Str.length > 2000000) {
+            onShowToast('ไฟล์มีขนาดใหญ่เกินไป (รองรับไม่เกิน ~1MB)', 'error');
+            setIsLoadingForm(false);
+            return;
+          }
+          await api.holidays.create({
+            holiday_date: '2099-12-31',
+            name: 'CONFIG_FORM_FILE:' + base64Str,
+            is_department_only: true
+          });
+          onShowToast('อัปโหลดไฟล์แบบฟอร์มเรียบร้อย');
+          onRefreshData();
+          setIsLoadingForm(false);
+        };
+        reader.onerror = () => {
+          onShowToast('เกิดข้อผิดพลาดในการอ่านไฟล์', 'error');
+          setIsLoadingForm(false);
+        };
+        return; // wait for onload
+      } else if (formUrl.trim()) {
         await api.holidays.create({
           holiday_date: '2099-12-31',
           name: 'CONFIG_FORM_URL:' + formUrl.trim(),
           is_department_only: true
         });
+        onShowToast('บันทึกลิงก์แบบฟอร์มเรียบร้อย');
+      } else {
+        onShowToast('ล้างการตั้งค่าแบบฟอร์มแล้ว');
       }
-      onShowToast('บันทึกลิงก์แบบฟอร์มเรียบร้อย');
       onRefreshData();
+      setIsLoadingForm(false);
     } catch (err) {
       onShowToast(err.message, 'error');
+      setIsLoadingForm(false);
     }
   }
 
@@ -478,23 +522,75 @@ export default function AdminSettingsView({
                     <AlertCircle className="w-4 h-4" />
                     ตั้งค่าแบบฟอร์มชี้แจง (กรณีหยุดเกิน 4 วัน)
                   </h3>
-                  <p className="text-xs text-amber-700 mt-1">แนบลิงก์ (เช่น Google Drive) สำหรับให้พนักงานโหลดหนังสือชี้แจง</p>
+                  <p className="text-xs text-amber-700 mt-1">อัปโหลดไฟล์เอกสารโดยตรง หรือแนบลิงก์สำหรับดาวน์โหลด</p>
                 </div>
               </div>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="url"
-                  placeholder="https://drive.google.com/..."
-                  value={formUrl}
-                  onChange={(e) => setFormUrl(e.target.value)}
-                  className="flex-1 p-2.5 text-xs border rounded-xl border-amber-200 bg-white"
-                />
-                <button
-                  onClick={handleSaveFormUrl}
-                  className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition whitespace-nowrap shadow-sm"
-                >
-                  บันทึกลิงก์
-                </button>
+              <div className="space-y-3">
+                <div className="flex gap-4 mb-2">
+                  <label className="flex items-center gap-1.5 text-xs text-amber-900 cursor-pointer">
+                    <input type="radio" name="formType" value="file" checked={currentFormType === 'file'} onChange={() => setCurrentFormType('file')} />
+                    อัปโหลดไฟล์ (PDF/Word ไม่เกิน 1MB)
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-amber-900 cursor-pointer">
+                    <input type="radio" name="formType" value="url" checked={currentFormType === 'url'} onChange={() => setCurrentFormType('url')} />
+                    แนบลิงก์ (URL)
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-amber-900 cursor-pointer">
+                    <input type="radio" name="formType" value="none" checked={currentFormType === 'none'} onChange={() => setCurrentFormType('none')} />
+                    ไม่ใช้งาน
+                  </label>
+                </div>
+
+                <div className="flex gap-2 items-center">
+                  {currentFormType === 'file' && (
+                    <div className="flex-1 flex items-center gap-2">
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={(e) => {
+                          setFormFile(e.target.files[0]);
+                          setFormUrl('');
+                        }}
+                        className="flex-1 p-2 text-xs border rounded-xl border-amber-200 bg-white"
+                      />
+                      {formFile && !formFile.size && (
+                        <span className="text-xs text-amber-700 font-semibold">{formFile.name}</span>
+                      )}
+                    </div>
+                  )}
+                  {currentFormType === 'url' && (
+                    <input
+                      type="url"
+                      placeholder="https://drive.google.com/..."
+                      value={formUrl}
+                      onChange={(e) => {
+                        setFormUrl(e.target.value);
+                        setFormFile(null);
+                      }}
+                      className="flex-1 p-2.5 text-xs border rounded-xl border-amber-200 bg-white"
+                    />
+                  )}
+                  {currentFormType === 'none' && (
+                    <div className="flex-1 p-2.5 text-xs text-amber-600 bg-amber-100/50 rounded-xl">ปิดการใช้งานดาวน์โหลดเอกสารชี้แจง</div>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (currentFormType === 'none') {
+                        setFormFile(null);
+                        setFormUrl('');
+                      } else if (currentFormType === 'file') {
+                        setFormUrl('');
+                      } else {
+                        setFormFile(null);
+                      }
+                      handleSaveFormUrl();
+                    }}
+                    disabled={isLoadingForm}
+                    className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition whitespace-nowrap shadow-sm"
+                  >
+                    {isLoadingForm ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}
+                  </button>
+                </div>
               </div>
             </div>
           )}

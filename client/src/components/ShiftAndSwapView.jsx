@@ -27,10 +27,14 @@ export default function ShiftAndSwapView({
   const [isSavingShift, setIsSavingShift] = useState(false);
   const [showExceedOffModal, setShowExceedOffModal] = useState(false);
 
-  // Extract Form URL from holidays
+  // Extract Form URL or File Data from holidays
   const formUrl = useMemo(() => {
-    const config = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_URL:'));
-    return config ? config.name.split('CONFIG_FORM_URL:')[1] : '';
+    const configFile = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_FILE:'));
+    if (configFile) {
+      return configFile.name.substring('CONFIG_FORM_FILE:'.length);
+    }
+    const configUrl = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_URL:'));
+    return configUrl ? configUrl.name.substring('CONFIG_FORM_URL:'.length) : '';
   }, [holidays]);
 
   // Swap Request Form State
@@ -925,9 +929,18 @@ export default function ShiftAndSwapView({
               <button 
                 onClick={() => {
                   if (formUrl) {
-                    window.open(formUrl, '_blank');
+                    if (formUrl.startsWith('data:')) {
+                      const link = document.createElement('a');
+                      link.href = formUrl;
+                      link.download = 'แบบฟอร์มชี้แจงการลา.pdf';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    } else {
+                      window.open(formUrl, '_blank');
+                    }
                   } else {
-                    onShowToast('แอดมินยังไม่ได้ตั้งค่าลิงก์เอกสาร', 'error');
+                    onShowToast('แอดมินยังไม่ได้ตั้งค่าเอกสาร', 'error');
                   }
                   setShowExceedOffModal(false);
                 }}
