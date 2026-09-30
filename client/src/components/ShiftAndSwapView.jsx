@@ -25,6 +25,13 @@ export default function ShiftAndSwapView({
   const [selectedShiftTypeId, setSelectedShiftTypeId] = useState(shiftTypes[0]?.id || 1);
   const [bookingNote, setBookingNote] = useState('');
   const [isSavingShift, setIsSavingShift] = useState(false);
+  const [showExceedOffModal, setShowExceedOffModal] = useState(false);
+
+  // Extract Form URL from holidays
+  const formUrl = useMemo(() => {
+    const config = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_URL:'));
+    return config ? config.name.split('CONFIG_FORM_URL:')[1] : '';
+  }, [holidays]);
 
   // Swap Request Form State
   const [swapModalOpen, setSwapModalOpen] = useState(false);
@@ -172,7 +179,11 @@ export default function ShiftAndSwapView({
       setSelectedDateForModal(null);
       onRefreshData();
     } catch (err) {
-      onShowToast(err.message, 'error');
+      if (err.message && err.message.includes('เกิน 4 วัน')) {
+        setShowExceedOffModal(true);
+      } else {
+        onShowToast(err.message, 'error');
+      }
     } finally {
       setIsSavingShift(false);
     }
@@ -886,6 +897,44 @@ export default function ShiftAndSwapView({
 
           </div>
 
+        </div>
+      )}
+
+      {/* Exceed Off (X) Modal */}
+      {showExceedOffModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60] animate-fadeIn">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl text-center">
+            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-2">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h3 className="font-bold text-slate-900 text-lg">แจ้งเตือนหยุดเกินกำหนด</h3>
+            <p className="text-sm text-slate-600">
+              คุณลงวันหยุด (X) ติดต่อกันเกิน 4 วัน 
+              <br/><br/>
+              ต้องการดาวน์โหลดหรือพิมพ์เอกสารเพื่อเขียนหนังสือชี้แจงการลาหรือไม่?
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button 
+                onClick={() => setShowExceedOffModal(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition text-sm"
+              >
+                ยกเลิก
+              </button>
+              <button 
+                onClick={() => {
+                  if (formUrl) {
+                    window.open(formUrl, '_blank');
+                  } else {
+                    onShowToast('แอดมินยังไม่ได้ตั้งค่าลิงก์เอกสาร', 'error');
+                  }
+                  setShowExceedOffModal(false);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 transition text-sm"
+              >
+                ใช่, โหลดเอกสาร
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
