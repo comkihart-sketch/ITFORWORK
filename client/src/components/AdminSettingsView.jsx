@@ -155,6 +155,35 @@ export default function AdminSettingsView({
     }
   }
 
+  // Clarification Form State
+  const [formUrl, setFormUrl] = useState('');
+  useEffect(() => {
+    const configFormHoliday = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_URL:'));
+    if (configFormHoliday) {
+      setFormUrl(configFormHoliday.name.split('CONFIG_FORM_URL:')[1]);
+    }
+  }, [holidays]);
+
+  async function handleSaveFormUrl() {
+    try {
+      const existing = holidays.find(h => h.holiday_date === '2099-12-31' && h.name.startsWith('CONFIG_FORM_URL:'));
+      if (existing) {
+        await api.holidays.delete(existing.id);
+      }
+      if (formUrl.trim()) {
+        await api.holidays.create({
+          holiday_date: '2099-12-31',
+          name: 'CONFIG_FORM_URL:' + formUrl.trim(),
+          is_department_only: true
+        });
+      }
+      onShowToast('บันทึกลิงก์แบบฟอร์มเรียบร้อย');
+      onRefreshData();
+    } catch (err) {
+      onShowToast(err.message, 'error');
+    }
+  }
+
   return (
     <div className="space-y-6">
       
@@ -440,22 +469,52 @@ export default function AdminSettingsView({
       {/* 2. HOLIDAYS MANAGEMENT */}
       {/* ========================================================= */}
       {adminTab === 'holidays' && (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-          <div className="flex justify-between items-center border-b pb-3 border-slate-100">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm">กำหนดวันหยุดนักขัตฤกษ์ & วันหยุดแผนก</h3>
-              <p className="text-xs text-slate-500">วันหยุดจะแสดงไฮไลต์สีแดงอ่อนในตารางรวมของทุกคน</p>
+        <div className="space-y-6">
+          {isAdmin && (
+            <div className="bg-amber-50 p-5 rounded-2xl border border-amber-200 shadow-xs space-y-4">
+              <div className="flex justify-between items-start border-b pb-3 border-amber-200/50">
+                <div>
+                  <h3 className="font-bold text-amber-900 text-sm flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4" />
+                    ตั้งค่าแบบฟอร์มชี้แจง (กรณีหยุดเกิน 4 วัน)
+                  </h3>
+                  <p className="text-xs text-amber-700 mt-1">แนบลิงก์ (เช่น Google Drive) สำหรับให้พนักงานโหลดหนังสือชี้แจง</p>
+                </div>
+              </div>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/..."
+                  value={formUrl}
+                  onChange={(e) => setFormUrl(e.target.value)}
+                  className="flex-1 p-2.5 text-xs border rounded-xl border-amber-200 bg-white"
+                />
+                <button
+                  onClick={handleSaveFormUrl}
+                  className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition whitespace-nowrap shadow-sm"
+                >
+                  บันทึกลิงก์
+                </button>
+              </div>
             </div>
-            {isAdmin && (
-              <button
-                onClick={() => setShowHolidayModal(true)}
-                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ เพิ่มวันหยุด</span>
-              </button>
-            )}
-          </div>
+          )}
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex justify-between items-center border-b pb-3 border-slate-100">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">กำหนดวันหยุดนักขัตฤกษ์ & วันหยุดแผนก</h3>
+                <p className="text-xs text-slate-500">วันหยุดจะแสดงไฮไลต์สีแดงอ่อนในตารางรวมของทุกคน</p>
+              </div>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowHolidayModal(true)}
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ เพิ่มวันหยุด</span>
+                </button>
+              )}
+            </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
             {holidays.map(h => (
@@ -545,6 +604,7 @@ export default function AdminSettingsView({
               </div>
             </div>
           )}
+          </div>
         </div>
       )}
 

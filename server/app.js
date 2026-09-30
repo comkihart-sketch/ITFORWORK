@@ -183,6 +183,77 @@ app.post('/api/shifts', authenticateToken, async (req, res) => {
       }
     }
 
+    // --- STREAK VALIDATION START ---
+    if (requestingShiftType) {
+      const targetDateObj = new Date(shift_date);
+      const prevDateObj = new Date(targetDateObj); prevDateObj.setMonth(prevDateObj.getMonth() - 1);
+      const nextDateObj = new Date(targetDateObj); nextDateObj.setMonth(nextDateObj.getMonth() + 1);
+      
+      const toMonthStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      
+      const [shifts1, shifts2, shifts3] = await Promise.all([
+        dbAdapter.getShifts(toMonthStr(prevDateObj)),
+        dbAdapter.getShifts(toMonthStr(targetDateObj)),
+        dbAdapter.getShifts(toMonthStr(nextDateObj))
+      ]);
+      
+      const allShifts = [...shifts1, ...shifts2, ...shifts3].filter(s => parseInt(s.user_id) === parseInt(targetUserId));
+      
+      const userShiftMap = {};
+      allShifts.forEach(s => {
+        const code = shiftTypes.find(st => st.id === s.shift_type_id)?.code || '';
+        userShiftMap[s.shift_date] = code;
+      });
+      userShiftMap[shift_date] = requestingShiftType.code; // Apply the new requested shift
+
+      const getType = (code) => {
+        if (!code) return 'NONE';
+        const uCode = code.toUpperCase();
+        if (uCode === 'X' || uCode.includes('หยุด')) return 'OFF';
+        if (uCode === 'V' || uCode.includes('ลา') || uCode.includes('พักร้อน')) return 'LEAVE';
+        return 'WORK';
+      };
+
+      const getOffsetDateStr = (baseStr, offset) => {
+        const d = new Date(baseStr);
+        d.setDate(d.getDate() + offset);
+        return d.toISOString().split('T')[0];
+      };
+
+      // 1. Check max 6 WORK days
+      let maxWorkStreak = 0;
+      let currentWorkStreak = 0;
+      for (let i = -6; i <= 6; i++) {
+        const dStr = getOffsetDateStr(shift_date, i);
+        if (getType(userShiftMap[dStr]) === 'WORK') {
+          currentWorkStreak++;
+          if (currentWorkStreak > maxWorkStreak) maxWorkStreak = currentWorkStreak;
+        } else {
+          currentWorkStreak = 0;
+        }
+      }
+      if (maxWorkStreak >= 7) {
+        return res.status(400).json({ error: 'ห้ามทำงานเกิน 6 วันติดต่อกัน ต้องใช้วันหยุด (X) หรือพักร้อน (V) มาคั่น' });
+      }
+
+      // 2. Check max 4 OFF (X) days
+      let maxOffStreak = 0;
+      let currentOffStreak = 0;
+      for (let i = -4; i <= 4; i++) {
+        const dStr = getOffsetDateStr(shift_date, i);
+        if (getType(userShiftMap[dStr]) === 'OFF') {
+          currentOffStreak++;
+          if (currentOffStreak > maxOffStreak) maxOffStreak = currentOffStreak;
+        } else {
+          currentOffStreak = 0;
+        }
+      }
+      if (maxOffStreak >= 5) {
+        return res.status(400).json({ error: 'ห้ามหยุด (X) ติดต่อกันเกิน 4 วัน หากจำเป็นต้องใช้พักร้อน (V) มาคั่น และต้องเขียนหนังสือชี้แจง (ดาวน์โหลดแบบฟอร์มได้ที่เมนู Admin)' });
+      }
+    }
+    // --- STREAK VALIDATION END ---
+
     const shiftResult = await dbAdapter.saveShift({
       user_id: targetUserId,
       shift_type_id,
