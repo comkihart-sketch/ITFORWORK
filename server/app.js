@@ -165,6 +165,24 @@ app.post('/api/shifts', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'กรุณาระบุประเภทเวรและวันที่' });
     }
 
+    // Validate exclusive shifts (M09, M10)
+    const shiftTypes = await dbAdapter.getShiftTypes();
+    const requestingShiftType = shiftTypes.find(st => st.id === parseInt(shift_type_id));
+
+    if (requestingShiftType && (requestingShiftType.code === 'M09' || requestingShiftType.code === 'M10')) {
+      const monthStr = shift_date.substring(0, 7);
+      const shiftsInMonth = await dbAdapter.getShifts(monthStr);
+      const isTaken = shiftsInMonth.some(s => 
+        s.shift_date === shift_date && 
+        s.shift_type_id === requestingShiftType.id && 
+        parseInt(s.user_id) !== parseInt(targetUserId)
+      );
+
+      if (isTaken) {
+        return res.status(400).json({ error: `ไม่สามารถลงเวร ${requestingShiftType.code} ได้ เนื่องจากมีเจ้าหน้าที่ท่านอื่นลงเวรนี้ไปแล้ว` });
+      }
+    }
+
     const shiftResult = await dbAdapter.saveShift({
       user_id: targetUserId,
       shift_type_id,
