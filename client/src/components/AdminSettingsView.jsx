@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Plus, Edit2, Trash2, ShieldAlert, Users, Calendar, Clock, Key, Printer } from 'lucide-react';
+import { Settings, Plus, Edit2, Trash2, ShieldAlert, Users, Calendar, Clock, Key, Printer, AlertCircle } from 'lucide-react';
 
 export default function AdminSettingsView({
   currentUser,
