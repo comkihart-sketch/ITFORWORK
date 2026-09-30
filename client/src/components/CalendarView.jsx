@@ -232,12 +232,15 @@ export default function CalendarView({
                 {/* Date Columns */}
                 {dateList.map(d => {
                   const holiday = holidayMap[d.dateStr];
+                  const isWorkHoliday = holiday && (holiday.name.includes('เสาร์ 5') || holiday.name.includes('ทำงาน'));
                   const isToday = d.dateStr === todayStr;
                   const dayName = thaiDayNames[d.dayOfWeek];
 
                   let thClass = 'p-2 text-center w-24 min-w-[80px] transition ';
                   if (isToday) {
                     thClass += 'bg-indigo-50/70 text-indigo-900 border-x-2 border-indigo-300 ';
+                  } else if (isWorkHoliday) {
+                    thClass += 'bg-amber-50 text-amber-800 border-x border-amber-200 ';
                   } else if (holiday) {
                     thClass += 'bg-rose-50 text-rose-800 border-x border-rose-200 ';
                   } else if (d.isWeekend) {
@@ -252,8 +255,8 @@ export default function CalendarView({
                         </span>
                       )}
                       {holiday && (
-                        <span className="text-[9px] block text-rose-600 font-semibold truncate mb-0.5" title={holiday.name}>
-                          🎌 {holiday.name}
+                        <span className={`text-[9px] block font-semibold truncate mb-0.5 ${isWorkHoliday ? 'text-amber-600' : 'text-rose-600'}`} title={holiday.name}>
+                          {isWorkHoliday ? '⚠️' : '🎌'} {holiday.name}
                         </span>
                       )}
                       <div className={`text-[10px] ${d.isWeekend ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>{dayName}</div>

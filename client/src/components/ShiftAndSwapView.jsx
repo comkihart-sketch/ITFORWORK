@@ -418,10 +418,10 @@ export default function ShiftAndSwapView({
 
                       {holiday && (
                         <span
-                          className="text-[9px] px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded font-semibold truncate max-w-[80px]"
+                          className={`text-[9px] px-1.5 py-0.5 rounded font-semibold truncate max-w-[80px] ${holiday.name.includes('เสาร์ 5') || holiday.name.includes('ทำงาน') ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}`}
                           title={holiday.name}
                         >
-                          🎌 {holiday.name}
+                          {holiday.name.includes('เสาร์ 5') || holiday.name.includes('ทำงาน') ? '⚠️' : '🎌'} {holiday.name}
                         </span>
                       )}
                     </div>
