@@ -11,7 +11,18 @@ import ExportView from './components/ExportView';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('shiftflow_user');
+      const token = localStorage.getItem('shiftflow_token');
+      if (token && saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Failed to parse cached user', e);
+    }
+    return null;
+  });
   const [allUsers, setAllUsers] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [shiftTypes, setShiftTypes] = useState([]);
@@ -20,7 +31,11 @@ export default function App() {
   const [notes, setNotes] = useState([]);
   const [activeTab, setActiveTab] = useState('calendar');
   const [toast, setToast] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    const token = localStorage.getItem('shiftflow_token');
+    const user = localStorage.getItem('shiftflow_user');
+    return Boolean(token && !user);
+  });
 
   // Month state (YYYY-MM)
   const [currentMonthStr, setCurrentMonthStr] = useState(() => {
@@ -36,24 +51,31 @@ export default function App() {
     }, 3500);
   }, []);
 
-// Initial Login & Load Data
+  // Initial Login & Load Data
   useEffect(() => {
     initializeSession();
   }, []);
 
   async function initializeSession() {
     try {
-      setIsLoading(true);
       const token = localStorage.getItem('shiftflow_token');
       if (token) {
         try {
           const me = await api.auth.me();
           setCurrentUser(me);
-        } catch {
-          localStorage.removeItem('shiftflow_token');
-          setCurrentUser(null);
+          localStorage.setItem('shiftflow_user', JSON.stringify(me));
+        } catch (err) {
+          console.warn('Session verification notice:', err);
+          // Only clear session if server explicitly reports 401 or 403 (unauthorized/invalid token)
+          // NEVER log out due to network error, offline mode, or temporary server cold boot
+          if (err && (err.status === 401 || err.status === 403)) {
+            localStorage.removeItem('shiftflow_token');
+            localStorage.removeItem('shiftflow_user');
+            setCurrentUser(null);
+          }
         }
       } else {
+        localStorage.removeItem('shiftflow_user');
         setCurrentUser(null);
       }
     } catch (err) {
@@ -102,6 +124,7 @@ export default function App() {
     try {
       const loginRes = await api.auth.login(targetUser.username, '1234');
       localStorage.setItem('shiftflow_token', loginRes.token);
+      localStorage.setItem('shiftflow_user', JSON.stringify(loginRes.user));
       setCurrentUser(loginRes.user);
       showToast(`สลับบัญชีผู้ใช้เป็น: ${targetUser.full_name}`);
     } catch (err) {
@@ -129,6 +152,7 @@ export default function App() {
   function handleLogout() {
     if (window.confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
       localStorage.removeItem('shiftflow_token');
+      localStorage.removeItem('shiftflow_user');
       setCurrentUser(null);
       showToast('ออกจากระบบเรียบร้อยแล้ว');
     }
@@ -138,11 +162,13 @@ export default function App() {
     if (res.token) {
       localStorage.setItem('shiftflow_token', res.token);
     }
-    setCurrentUser(prev => ({
-      ...prev,
+    const updated = {
+      ...currentUser,
       ...res.user,
       must_change_password: false
-    }));
+    };
+    localStorage.setItem('shiftflow_user', JSON.stringify(updated));
+    setCurrentUser(updated);
     showToast('🎉 บันทึกรหัสผ่านใหม่เรียบร้อยแล้ว ยินดีต้อนรับเข้าสู่ระบบ!');
   }
 

@@ -16,7 +16,10 @@ async function fetchJson(url, options = {}) {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.error || 'เกิดข้อผิดพลาดในการติดต่อระบบ');
+    const error = new Error(data.error || 'เกิดข้อผิดพลาดในการติดต่อระบบ');
+    error.status = res.status;
+    error.data = data;
+    throw error;
   }
 
   return data;

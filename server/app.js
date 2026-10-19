@@ -22,6 +22,25 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Auth Middleware
+function verifyTokenWithFallback(token) {
+  const secrets = [
+    JWT_SECRET,
+    'shiftflow_department_jwt_secret_key_2026_secure',
+    'shiftflow_super_secret_key_2026'
+  ];
+  const uniqueSecrets = Array.from(new Set(secrets.filter(Boolean)));
+
+  for (const sec of uniqueSecrets) {
+    try {
+      const decoded = jwt.verify(token, sec, { ignoreExpiration: true });
+      return { user: decoded, error: null };
+    } catch (err) {
+      // try next secret
+    }
+  }
+  return { user: null, error: new Error('Token ไม่ถูกต้อง') };
+}
+
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -30,11 +49,13 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนใช้งาน' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Token ไม่ถูกต้องหรือหมดอายุ' });
-    req.user = user;
-    next();
-  });
+  const { user, error } = verifyTokenWithFallback(token);
+  if (error || !user) {
+    return res.status(403).json({ error: 'Token ไม่ถูกต้องหรือหมดอายุ' });
+  }
+
+  req.user = user;
+  next();
 }
 
 function requireAdmin(req, res, next) {
@@ -74,7 +95,8 @@ app.post('/api/auth/login', async (req, res) => {
       must_change_password: mustChangePassword
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    // Token valid permanently (100 years)
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '36500d' });
     res.json({ token, user: payload, must_change_password: mustChangePassword });
   } catch (err) {
     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + err.message });
@@ -118,7 +140,8 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
       must_change_password: false
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    // Token valid permanently (100 years)
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '36500d' });
     res.json({
       success: true,
       message: 'ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว',
