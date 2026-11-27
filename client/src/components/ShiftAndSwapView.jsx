@@ -86,6 +86,21 @@ export default function ShiftAndSwapView({
     return map;
   }, [shifts, currentUser]);
 
+  // Other Team Members' Shifts lookup map: dateStr -> [{ id, user, shiftType }]
+  const otherShiftsByDateMap = useMemo(() => {
+    const map = {};
+    (shifts || [])
+      .filter(s => s.user_id !== currentUser?.id)
+      .forEach(s => {
+        const user = allUsers.find(u => u.id === s.user_id);
+        const shiftType = shiftTypes.find(st => st.id === s.shift_type_id);
+        if (!user || !shiftType) return;
+        if (!map[s.shift_date]) map[s.shift_date] = [];
+        map[s.shift_date].push({ id: s.id, user, shiftType });
+      });
+    return map;
+  }, [shifts, currentUser, allUsers, shiftTypes]);
+
   // Count my shifts this month
   const myShiftsSummary = useMemo(() => {
     const list = Object.values(myShiftsMap);
@@ -119,6 +134,7 @@ export default function ShiftAndSwapView({
       const isToday = dateStr === todayStr;
       const holiday = holidayMap[dateStr];
       const shift = myShiftsMap[dateStr];
+      const otherShifts = otherShiftsByDateMap[dateStr] || [];
 
       cells.push({
         isPadding: false,
@@ -129,7 +145,8 @@ export default function ShiftAndSwapView({
         isWeekend,
         isToday,
         holiday,
-        shift
+        shift,
+        otherShifts
       });
     }
 
@@ -142,7 +159,7 @@ export default function ShiftAndSwapView({
     }
 
     return cells;
-  }, [year, month, holidayMap, myShiftsMap, todayStr]);
+  }, [year, month, holidayMap, myShiftsMap, otherShiftsByDateMap, todayStr]);
 
   // Pending swap requests where target_user_id === currentUser.id
   const pendingRequestsForMe = useMemo(() => {
@@ -415,13 +432,13 @@ export default function ShiftAndSwapView({
                   );
                 }
 
-                const { dayNumber, dateStr, isToday, isWeekend, holiday, shift } = cell;
+                const { dayNumber, dateStr, isToday, isWeekend, holiday, shift, otherShifts = [] } = cell;
 
                 return (
                   <div
                     key={cell.key}
                     onClick={() => handleCellClick(dateStr)}
-                    className={`min-h-[100px] p-2 relative flex flex-col justify-between transition group cursor-pointer hover:bg-indigo-50/40 hover:border-indigo-300 ${
+                    className={`min-h-[115px] p-2 relative flex flex-col justify-between transition group cursor-pointer hover:bg-indigo-50/40 hover:border-indigo-300 ${
                       isToday ? 'bg-indigo-50/30 ring-2 ring-indigo-400 inset-0' : (holiday ? 'bg-rose-50/20' : (isWeekend ? 'bg-rose-50/35' : 'bg-white'))
                     }`}
                   >
@@ -443,8 +460,8 @@ export default function ShiftAndSwapView({
                       )}
                     </div>
 
-                    {/* Middle: Shift Information (If booked) */}
-                    <div className="my-1.5 flex-1 flex flex-col justify-center">
+                    {/* Middle: My Shift Information (If booked) + Team Members' Shifts */}
+                    <div className="my-1.5 flex-1 flex flex-col justify-between gap-1.5">
                       {shift ? (
                         <div
                           style={{
@@ -469,9 +486,30 @@ export default function ShiftAndSwapView({
                           )}
                         </div>
                       ) : (
-                        <div className="h-full flex items-center justify-center border border-dashed border-slate-200 rounded-xl text-slate-300 text-[11px] group-hover:border-indigo-300 group-hover:text-indigo-600 transition">
+                        <div className="min-h-[40px] flex-1 flex items-center justify-center border border-dashed border-slate-200 rounded-xl text-slate-300 text-[11px] group-hover:border-indigo-300 group-hover:text-indigo-600 transition">
                           <Plus className="w-3.5 h-3.5 mr-0.5" />
                           <span>ลงเวร</span>
+                        </div>
+                      )}
+
+                      {/* Other Team Members' Shifts on this Date */}
+                      {otherShifts.length > 0 && (
+                        <div className="pt-1 border-t border-slate-100 space-y-0.5">
+                          {otherShifts.map(({ id, user, shiftType }) => (
+                            <div
+                              key={id}
+                              title={`${user.full_name}: ${shiftType.code} (${shiftType.name})`}
+                              className="flex items-center justify-between gap-1 px-1.5 py-0.5 rounded text-[10px] border leading-tight"
+                              style={{
+                                backgroundColor: shiftType.color_bg,
+                                color: shiftType.color_text,
+                                borderColor: shiftType.color_border
+                              }}
+                            >
+                              <span className="truncate font-medium">{user.full_name.split(' ')[0]}</span>
+                              <span className="font-bold shrink-0">{shiftType.code}</span>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -580,6 +618,10 @@ export default function ShiftAndSwapView({
                 <div className="grid grid-cols-2 gap-2.5">
                   {shiftTypes.map(st => {
                     const isSelected = parseInt(selectedShiftTypeId) === st.id;
+                    const bookedByOthers = (otherShiftsByDateMap[selectedDateForModal] || []).filter(
+                      item => item.shiftType.id === st.id
+                    );
+                    const isExclusiveTaken = (st.code === 'M09' || st.code === 'M10') && bookedByOthers.length > 0;
                     return (
                       <button
                         type="button"
@@ -591,7 +633,7 @@ export default function ShiftAndSwapView({
                         }}
                         className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
                           isSelected ? 'ring-2 ring-indigo-500 shadow-sm' : 'hover:bg-slate-50'
-                        }`}
+                        } ${isExclusiveTaken ? 'opacity-70' : ''}`}
                       >
                         <div className="flex justify-between items-start">
                           <span
@@ -607,6 +649,12 @@ export default function ShiftAndSwapView({
                         <div className="mt-1">
                           <div className="font-bold text-slate-900 text-xs">{st.name}</div>
                           <div className="text-[10px] text-slate-500">{st.start_time} - {st.end_time}</div>
+                          {bookedByOthers.length > 0 && (
+                            <div className="mt-1 text-[10px] font-semibold text-slate-600 truncate">
+                              {isExclusiveTaken ? '🔒 ' : '👥 '}
+                              {bookedByOthers.map(b => b.user.full_name.split(' ')[0]).join(', ')}
+                            </div>
+                          )}
                         </div>
                       </button>
                     );
