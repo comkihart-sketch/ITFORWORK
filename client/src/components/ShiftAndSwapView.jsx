@@ -106,11 +106,16 @@ export default function ShiftAndSwapView({
     const list = Object.values(myShiftsMap);
     const countByCode = {};
     let total = 0;
+    let offDays = 0;
     list.forEach(s => {
       if (s.shift_code !== 'OFF') total++;
+      const codeUpper = (s.shift_code || '').toUpperCase();
+      if (codeUpper === 'X' || codeUpper === 'OFF' || (s.shift_name || '').includes('หยุด')) {
+        offDays++;
+      }
       countByCode[s.shift_code] = (countByCode[s.shift_code] || 0) + 1;
     });
-    return { total, countByCode };
+    return { total, offDays, countByCode };
   }, [myShiftsMap]);
 
   // Count weekends (Sat/Sun) & other holidays in this month
@@ -454,6 +459,18 @@ export default function ShiftAndSwapView({
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200 text-[11px]">
                   รวม {monthHolidaySummary.totalOffDays} วัน
+                </span>
+                <span
+                  title="นับจากเวรหยุด (X) ที่คุณลงไว้ในเดือนนี้เทียบกับวันหยุดรวมของเดือน"
+                  className={`px-2 py-0.5 rounded-md font-bold border text-[11px] ${
+                    myShiftsSummary.offDays === monthHolidaySummary.totalOffDays
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : myShiftsSummary.offDays > monthHolidaySummary.totalOffDays
+                        ? 'bg-rose-100 text-rose-800 border-rose-300'
+                        : 'bg-sky-50 text-sky-700 border-sky-200'
+                  }`}
+                >
+                  ลงหยุดแล้ว: {myShiftsSummary.offDays}/{monthHolidaySummary.totalOffDays} วัน
                 </span>
               </div>
             </div>
