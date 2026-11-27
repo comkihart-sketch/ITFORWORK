@@ -113,6 +113,38 @@ export default function ShiftAndSwapView({
     return { total, countByCode };
   }, [myShiftsMap]);
 
+  // Count weekends (Sat/Sun) & other holidays in this month
+  const monthHolidaySummary = useMemo(() => {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}-`;
+    let weekendDays = 0;
+    const weekendDateSet = new Set();
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dayOfWeek = new Date(year, month - 1, d).getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        weekendDays++;
+        weekendDateSet.add(`${monthPrefix}${String(d).padStart(2, '0')}`);
+      }
+    }
+
+    const otherHolidays = (holidays || []).filter(h =>
+      h.holiday_date &&
+      h.holiday_date.startsWith(monthPrefix) &&
+      !h.name.startsWith('CONFIG_FORM_') &&
+      !h.name.includes('เสาร์ 5') &&
+      !h.name.includes('ทำงาน')
+    );
+
+    const nonWeekendHolidaysCount = otherHolidays.filter(h => !weekendDateSet.has(h.holiday_date)).length;
+
+    return {
+      weekendDays,
+      otherHolidays,
+      totalOffDays: weekendDays + nonWeekendHolidaysCount
+    };
+  }, [year, month, holidays]);
+
   // Generate Calendar Days Grid (Sunday -> Saturday)
   const calendarCells = useMemo(() => {
     const daysInMonth = new Date(year, month, 0).getDate();
@@ -382,24 +414,48 @@ export default function ShiftAndSwapView({
               </button>
             </div>
 
-            {/* Quick Summary of User's Shifts */}
-            <div className="flex items-center justify-center flex-wrap gap-2 text-xs w-full lg:w-auto flex-1">
-              <span className="text-slate-500 font-medium">เวรของคุณเดือนนี้:</span>
-              <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 font-bold border border-indigo-200">
-                รวม {myShiftsSummary.total} กะ
-              </span>
-              {Object.entries(myShiftsSummary.countByCode).map(([code, count]) => {
-                const sType = shiftTypes.find(t => t.code === code);
-                return (
-                  <span
-                    key={code}
-                    style={{ backgroundColor: sType?.color_bg, color: sType?.color_text, borderColor: sType?.color_border }}
-                    className="px-2 py-0.5 rounded-md font-semibold border text-[11px]"
-                  >
-                    {code}: {count}
-                  </span>
-                );
-              })}
+            {/* Quick Summary of User's Shifts & Month Holidays */}
+            <div className="flex items-center justify-center lg:justify-end flex-wrap gap-3 text-xs w-full lg:w-auto flex-1">
+              <div className="flex items-center justify-center flex-wrap gap-1.5">
+                <span className="text-slate-500 font-medium">เวรของคุณเดือนนี้:</span>
+                <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 font-bold border border-indigo-200">
+                  รวม {myShiftsSummary.total} กะ
+                </span>
+                {Object.entries(myShiftsSummary.countByCode).map(([code, count]) => {
+                  const sType = shiftTypes.find(t => t.code === code);
+                  return (
+                    <span
+                      key={code}
+                      style={{ backgroundColor: sType?.color_bg, color: sType?.color_text, borderColor: sType?.color_border }}
+                      className="px-2 py-0.5 rounded-md font-semibold border text-[11px]"
+                    >
+                      {code}: {count}
+                    </span>
+                  );
+                })}
+              </div>
+
+              <div className="hidden sm:block h-5 w-px bg-slate-200" />
+
+              <div className="flex items-center justify-center flex-wrap gap-1.5">
+                <span className="text-slate-500 font-medium">วันหยุดเดือนนี้:</span>
+                <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 font-semibold border border-rose-200 text-[11px]">
+                  เสาร์-อาทิตย์: {monthHolidaySummary.weekendDays} วัน
+                </span>
+                <span
+                  title={
+                    monthHolidaySummary.otherHolidays.length > 0
+                      ? monthHolidaySummary.otherHolidays.map(h => `${h.holiday_date}: ${h.name}`).join('\n')
+                      : 'ไม่มีวันหยุดอื่นในเดือนนี้'
+                  }
+                  className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 font-semibold border border-amber-200 text-[11px] cursor-help"
+                >
+                  วันหยุดอื่นๆ: {monthHolidaySummary.otherHolidays.length} วัน
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200 text-[11px]">
+                  รวม {monthHolidaySummary.totalOffDays} วัน
+                </span>
+              </div>
             </div>
 
           </div>
